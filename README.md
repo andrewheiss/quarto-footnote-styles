@@ -1,0 +1,350 @@
+
+
+# Quarto footnote styles
+
+- [Installation](#installation)
+- [Usage](#usage)
+- [Options](#options)
+  - [`style`](#style)
+  - [`custom`](#custom)
+  - [`cycle`](#cycle)
+  - [`separator`](#separator)
+- [Examples](#examples)
+  - [Symbols with doubling](#symbols-with-doubling)
+  - [Roman numerals with period
+    separator](#roman-numerals-with-period-separator)
+  - [Custom symbols with restart](#custom-symbols-with-restart)
+  - [Padded numbers with separator](#padded-numbers-with-separator)
+- [Format support](#format-support)
+- [Customizing CSS](#customizing-css)
+
+<!-- README.md is generated from README.qmd. Please edit that file -->
+
+This extension replaces Quarto’s default numeric footnote numbering with
+several alternative numbering systems, inspired by Adobe InDesign’s
+numbering styles.
+
+| Style         | Sequence                    |
+|---------------|-----------------------------|
+| `numeric`     | 1, 2, 3, 4, … (default)     |
+| `numeric-02`  | 01, 02, 03, …               |
+| `numeric-03`  | 001, 002, 003, …            |
+| `alpha-lower` | a, b, c, … z, aa, ab, …     |
+| `alpha-upper` | A, B, C, … Z, AA, AB, …     |
+| `roman-lower` | i, ii, iii, iv, v, …        |
+| `roman-upper` | I, II, III, IV, V, …        |
+| `symbols`     | \*, †, ‡, §, ¶, \*\*, ††, … |
+| `asterisk`    | \*, \*\*, \*\*\*, …         |
+
+You can also define your own custom numbering system.
+
+The extension supports HTML, LaTeX/PDF, and Typst. It does not support
+Word because Word makes it impossible(?!) to programmatically adjust
+these kinds of footnote settings.
+
+## Installation
+
+To install this extension in your current directory (or into the Quarto
+project that you’re currently working in), use the following terminal
+command:
+
+``` sh
+quarto add andrewheiss/quarto-footnote-styles
+```
+
+This will install the extension in the `_extensions` subdirectory. If
+you’re using version control, you will want to check in this directory.
+
+## Usage
+
+Enable the filter by including it in your YAML front matter. Define the
+style you want to use with `extensions.footnote-styles.style`.
+
+``` yaml
+---
+title: Your title
+filters:
+  - footnote-styles
+extensions:
+  footnote-styles:
+    style: "symbols"
+---
+```
+
+Then use footnotes as normal:
+
+``` markdown
+This is some text with a footnote.[^1]
+
+[^1]: The footnote content.
+```
+
+Using the `symbols` style, the footnote symbol will render as a `*`
+instead of a `¹`.
+
+## Options
+
+``` yaml
+---
+title: Your title
+filters:
+  - footnote-styles
+extensions:
+  footnote-styles:
+    style: "symbols"
+---
+```
+
+All options go under `extensions.footnote-styles` in your YAML metadata.
+
+### `style`
+
+You can use one of nine predefined numbering systems:
+
+| Style         | Sequence                    |
+|---------------|-----------------------------|
+| `numeric`     | 1, 2, 3, 4, … (default)     |
+| `numeric-02`  | 01, 02, 03, …               |
+| `numeric-03`  | 001, 002, 003, …            |
+| `alpha-lower` | a, b, c, … z, aa, ab, …     |
+| `alpha-upper` | A, B, C, … Z, AA, AB, …     |
+| `roman-lower` | i, ii, iii, iv, v, …        |
+| `roman-upper` | I, II, III, IV, V, …        |
+| `symbols`     | \*, †, ‡, §, ¶, \*\*, ††, … |
+| `asterisk`    | \*, \*\*, \*\*\*, …         |
+
+``` yaml
+extensions:
+  footnote-styles:
+    style: "numeric-03"
+```
+
+### `custom`
+
+You can provide your own list of symbols too. For instance, if you want
+to use this alternative set of symbols, define it with `custom`:
+
+``` yaml
+extensions:
+  footnote-styles:
+    custom: ["†", "‡", "§", "‖"]
+```
+
+The first footnote will now use `†` as the symbol, followed by `‡`, and
+so on.
+
+The `custom` setting overrides whatever you define in `style`. Custom
+symbols follow the same cycling behavior as the `symbols` style
+(controlled by the `cycle` option).
+
+### `cycle`
+
+The `cycle` setting controls what happens when the symbol set is
+exhausted. Only applies to `symbols`, `asterisk`, and `custom` styles.
+The default is `"repeat"`.
+
+- **`repeat`**: Double up each symbol and cycle again: \*, †, ‡, §, ¶,
+  \*\*, ††, ‡‡, §§, ¶¶, \*\*\*, …
+- **`restart`**: Start over from the beginning: \*, †, ‡, §, ¶, \*, †, …
+
+### `separator`
+
+The `separator` setting defines a character (or characters) placed
+between the marker and the footnote text in the footnotes section.
+Default: none.
+
+``` yaml
+extensions:
+  footnote-styles:
+    style: "roman-lower"
+    separator: "."
+```
+
+This produces footnotes like:
+
+       i.  First footnote text.
+      ii.  Second footnote text.
+     iii.  Third footnote text.
+    viii.  Eighth footnote text.
+
+The markers are right-aligned, so separators like `.` and `)` align
+neatly regardless of marker width. Spacing between the separator and the
+footnote text is handled automatically by CSS.
+
+> **Note:** The `separator` option is currently HTML-only. LaTeX and
+> Typst use their own default footnote text formatting.
+
+## Examples
+
+See the different `.qmd` files in the `examples/` folder in this
+repository for examples of each built-in style and for an example of
+custom styles. Some shorter illustrations are included here too.
+
+### Symbols with doubling
+
+``` yaml
+extensions:
+  footnote-styles:
+    style: "symbols"
+```
+
+In Markdown:
+
+``` default
+This^[1] is^[2] a^[3] sentence^[4] with^[5] lots^[6] of^[7] notes^[8] in it.
+```
+
+In the text:
+
+> This<sup>\*</sup> is<sup>†</sup> a<sup>‡</sup> sentence<sup>§</sup>
+> with<sup>¶</sup> lots<sup>\*\*</sup> of<sup>††</sup>
+> notes<sup>‡‡</sup> in it.
+
+### Roman numerals with period separator
+
+``` yaml
+extensions:
+  footnote-styles:
+    style: "roman-upper"
+    separator: "."
+```
+
+In Markdown:
+
+``` default
+This^[1] is^[2] a^[3] sentence^[4] with^[5] lots^[6] of^[7] notes^[8] in it.
+```
+
+In the text:
+
+> This<sup>I</sup> is<sup>II</sup> a<sup>III</sup> sentence<sup>IV</sup>
+> with<sup>V</sup> lots<sup>VI</sup> of<sup>VII</sup>
+> notes<sup>VIII</sup> in it.
+
+In the notes:
+
+``` default
+   I. 1
+  II. 2
+ III. 3
+  IV. 4
+   V. 5
+  VI. 6
+ VII. 7
+VIII. 8
+```
+
+### Custom symbols with restart
+
+``` yaml
+extensions:
+  footnote-styles:
+    custom: ["★", "◆", "●"]
+    cycle: "restart"
+```
+
+In Markdown:
+
+``` default
+This^[1] is^[2] a^[3] sentence^[4] with^[5] lots^[6] of^[7] notes^[8] in it.
+```
+
+In the text:
+
+> This<sup>★</sup> is<sup>◆</sup> a<sup>●</sup> sentence<sup>★</sup>
+> with<sup>◆</sup> lots<sup>●</sup> of<sup>★</sup> notes<sup>◆</sup> in
+> it.
+
+In the notes:
+
+``` default
+★ 1
+◆ 2
+● 3
+★ 4
+◆ 5
+● 6
+★ 7
+◆ 8
+```
+
+### Padded numbers with separator
+
+``` yaml
+extensions:
+  footnote-styles:
+    style: "numeric-02"
+    separator: ")"
+```
+
+In Markdown:
+
+``` default
+This^[1] is^[2] a^[3] sentence^[4] with^[5] lots^[6] of^[7] notes^[8] in it.
+```
+
+In the text:
+
+> This<sup>01</sup> is<sup>02</sup> a<sup>03</sup> sentence<sup>04</sup>
+> with<sup>05</sup> lots<sup>06</sup> of<sup>07</sup> notes<sup>08</sup>
+> in it.
+
+In the notes:
+
+``` default
+01) 1
+02) 2
+03) 3
+04) 4
+05) 5
+06) 6
+07) 7
+08) 8
+```
+
+## Format support
+
+Every Quarto format handles footnotes differently, and not every format
+supports every possible extension options.
+
+| Feature             | HTML | LaTeX/PDF | Typst |
+|---------------------|------|-----------|-------|
+| All `style` options | Yes  | Yes       | Yes   |
+| `custom` symbols    | Yes  | Yes       | Yes   |
+| `cycle` modes       | Yes  | Yes       | Yes   |
+| `separator`         | Yes  | No        | No    |
+| CSS customization   | Yes  | —         | —     |
+
+- **HTML**: Full support. The filter replaces Pandoc’s default footnote
+  rendering with custom markers and uses CSS Grid for alignment in the
+  footnotes section.
+
+- **LaTeX/PDF**: Injects `\renewcommand{\thefootnote}{...}` into the
+  preamble. Simple styles (`alpha-lower`, `roman-upper`, etc.) use
+  native LaTeX counter formats. Complex styles (`symbols`, `asterisk`,
+  `custom`) generate a `\ifcase` lookup table. Requires the XeLaTeX or
+  LuaLaTeX engine for Unicode symbols (use `pdf-engine: xelatex` [in the
+  YAML](https://quarto.org/docs/output-formats/pdf-engine.html#alternate-pdf-engines)).
+
+- **Typst**: Injects `#set footnote(numbering: ...)` into the document
+  header. Simple styles map to Typst’s built-in numbering patterns.
+  Complex styles use custom numbering functions.
+
+## Customizing CSS
+
+The extension injects minimal CSS for marker alignment. You can override
+any of it in your own stylesheet or with Quarto’s `css` option:
+
+``` yaml
+format:
+  html:
+    css: custom.css
+```
+
+Main selectors to worry about:
+
+- `.footnotes ol` — The footnote list container (uses CSS Grid)
+- `.footnotes li::before` — The marker pseudo-element (right-aligned)
+- `.footnotes li > div` — The footnote body wrapper
+- `column-gap` on `.footnotes ol` — Space between marker and text
+  (default: `0.4em`)

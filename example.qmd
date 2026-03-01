@@ -1,0 +1,39 @@
+---
+title: "Footnote symbols"
+
+format:
+  html: default
+  pdf: default
+  typst:
+    output-file: "example-typst.pdf"
+
+# Enable the filter
+filters:
+  - footnote-styles
+
+# Change settings
+extensions:
+  footnote-styles:
+    style: "symbols"
+    # style: "roman-lower"
+    # separator: "."
+    # custom: ["†", "‡", "§", "‖"]
+    # cycle: "repeat"
+---
+
+This is some text with a footnote.[^1] Here is another footnote.[^2] And a third.[^3]
+
+A fourth footnote here.[^4] And a fifth.[^5]
+
+Now we cycle into doubled symbols: sixth,[^6] seventh,[^7] eighth,[^8] ninth,[^9] and tenth.[^10]
+
+[^1]: This is the first footnote.
+[^2]: This is the second footnote.
+[^3]: This is the third footnote.
+[^4]: This is the fourth footnote.
+[^5]: This is the fifth footnote.
+[^6]: This is the sixth footnote — symbols should start doubling.
+[^7]: Seventh footnote.
+[^8]: Eighth footnote.
+[^9]: Ninth footnote.
+[^10]: Tenth footnote.

@@ -1,0 +1,31 @@
+---
+title: "Roman Numerals (Uppercase)"
+format:
+  html: default
+  pdf: default
+  typst:
+    output-file: "example-roman-upper-typst.pdf"
+filters:
+  - ../_extensions/footnote-styles/footnote-styles.lua
+extensions:
+  footnote-styles:
+    style: "roman-upper"
+    separator: "."
+---
+
+This is some text with a footnote.[^1] Here is another footnote.[^2] And a third.[^3]
+
+A fourth footnote here.[^4] And a fifth.[^5]
+
+Sixth,[^6] seventh,[^7] eighth,[^8] ninth,[^9] and tenth.[^10]
+
+[^1]: First footnote.
+[^2]: Second footnote.
+[^3]: Third footnote.
+[^4]: Fourth footnote.
+[^5]: Fifth footnote.
+[^6]: Sixth footnote.
+[^7]: Seventh footnote.
+[^8]: Eighth footnote.
+[^9]: Ninth footnote.
+[^10]: Tenth footnote.
