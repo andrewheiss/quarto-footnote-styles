@@ -6,7 +6,10 @@ local counter = 0
 local style = "numeric"
 local cycle_mode = "repeat"
 local symbol_set = nil
-local separator = ""
+local marker_prefix = ""
+local marker_suffix = ""
+local text_prefix = ""
+local text_suffix = ""
 local start_at = 1
 
 -- Default symbol sets for predefined styles
@@ -84,8 +87,8 @@ local function html_escape(s)
   return s
 end
 
--- CSS-escape a string for use in content: "..."
-local function css_escape(s)
+-- Escape a string for use inside a Typst string literal
+local function typst_str_escape(s)
   s = s:gsub("\\", "\\\\")
   s = s:gsub('"', '\\"')
   return s
@@ -114,9 +117,20 @@ local function read_config(meta)
     cycle_mode = pandoc.utils.stringify(ext_config.cycle)
   end
 
-  -- Read separator (HTML only)
-  if ext_config.separator then
-    separator = pandoc.utils.stringify(ext_config.separator)
+  -- Read reference prefix/suffix
+  if ext_config["marker-prefix"] then
+    marker_prefix = pandoc.utils.stringify(ext_config["marker-prefix"])
+  end
+  if ext_config["marker-suffix"] then
+    marker_suffix = pandoc.utils.stringify(ext_config["marker-suffix"])
+  end
+
+  -- Read text prefix/suffix (HTML only)
+  if ext_config["text-prefix"] then
+    text_prefix = pandoc.utils.stringify(ext_config["text-prefix"])
+  end
+  if ext_config["text-suffix"] then
+    text_suffix = pandoc.utils.stringify(ext_config["text-suffix"])
   end
 
   -- Read start-at
@@ -142,15 +156,10 @@ end
 ------------------------------------------------------------------------
 
 local function inject_html_css()
-  local sep_css = '""'
-  if separator ~= "" then
-    sep_css = '"' .. css_escape(separator) .. '"'
-  end
-
-  -- Use CSS Grid on <ol> with display:contents on <li> so that all
-  -- ::before markers share a single auto-sized column—the grid
-  -- automatically sizes to the widest marker, no width calc needed.
-  local css = string.format([[
+  -- text_prefix/text_suffix are baked into data-marker on each <li>,
+  -- so the ::before content simply reads that attribute.
+  -- CSS Grid auto-sizes the marker column to the widest entry.
+  local css = [[
 .footnotes ol {
   display: grid;
   grid-template-columns: auto 1fr;
@@ -162,7 +171,7 @@ local function inject_html_css()
   display: contents;
 }
 .footnotes li::before {
-  content: attr(data-marker) %s;
+  content: attr(data-marker);
   text-align: right;
   white-space: pre;
 }
@@ -174,7 +183,7 @@ local function inject_html_css()
 .tippy-content > div > p:last-child {
   margin-bottom: 0;
 }
-]], sep_css)
+]]
 
   quarto.doc.include_text("in-header", "<style>" .. css .. "</style>")
 end
@@ -184,9 +193,11 @@ local function html_filters()
     {
       Meta = function(meta)
         local has_config = read_config(meta)
+        local no_prefix_suffix = marker_prefix == "" and marker_suffix == ""
+          and text_prefix == "" and text_suffix == ""
         if not has_config then
           style = nil
-        elseif style == "numeric" and start_at == 1 then
+        elseif style == "numeric" and start_at == 1 and no_prefix_suffix then
           style = nil
         end
         return meta
@@ -201,7 +212,6 @@ local function html_filters()
         counter = counter + 1
         local n = counter + start_at - 1
         local sym = get_symbol(n)
-        local escaped_sym = html_escape(sym)
 
         table.insert(footnotes, {
           n = n,
@@ -211,7 +221,7 @@ local function html_filters()
 
         local ref_html = string.format(
           '<a href="#fn%d" class="footnote-ref" id="fnref%d" role="doc-noteref"><sup>%s</sup></a>',
-          n, n, escaped_sym
+          n, n, html_escape(marker_prefix .. sym .. marker_suffix)
         )
         return pandoc.RawInline('html', ref_html)
       end
@@ -230,7 +240,7 @@ local function html_filters()
         table.insert(parts, '<ol>')
 
         for _, fn in ipairs(footnotes) do
-          local escaped_sym = html_escape(fn.symbol)
+          local marker = html_escape(text_prefix .. fn.symbol .. text_suffix)
           local body_html = pandoc.write(pandoc.Pandoc(fn.content), 'html')
 
           local backlink = string.format(
@@ -247,7 +257,7 @@ local function html_filters()
 
           table.insert(parts, string.format(
             '<li id="fn%d" data-marker="%s"><div>%s</div></li>',
-            fn.n, escaped_sym, body_html
+            fn.n, marker, body_html
           ))
         end
 
@@ -341,6 +351,14 @@ local function latex_filters()
           local preamble = generate_latex_preamble()
           if preamble then table.insert(parts, preamble) end
         end
+        if marker_prefix ~= "" or marker_suffix ~= "" then
+          local lp = latex_escape(marker_prefix)
+          local ls = latex_escape(marker_suffix)
+          table.insert(parts, string.format([[
+\makeatletter
+\renewcommand{\@makefnmark}{\hbox{\@textsuperscript{\normalfont %s\@thefnmark %s}}}
+\makeatother]], lp, ls))
+        end
         if #parts > 0 then
           quarto.doc.include_text("in-header", table.concat(parts, "\n"))
         end
@@ -360,62 +378,91 @@ end
 
 local function generate_typst_preamble()
   local offset = start_at - 1
-  -- sep is concatenated directly, never passed through string.format,
-  -- so the literal % in "40%" is safe
+  -- Typst's numbering function applies to both inline and list markers equally,
+  -- so marker-prefix/suffix affects both (text-prefix/suffix is HTML-only)
+  local tp = typst_str_escape(marker_prefix)
+  local ts = typst_str_escape(marker_suffix)
+  local has_wrap = marker_prefix ~= "" or marker_suffix ~= ""
+
+  -- sep is concatenated directly (never via string.format) so the literal
+  -- % in "40%" is safe
   local sep = '\n#set footnote.entry(separator: line(length: 40%, stroke: 0.5pt))'
 
-  -- Simple letter/roman styles: use built-in pattern or numbering() with offset
+  -- Wrap a single Typst expression with text prefix/suffix
+  local function wrap(expr)
+    if not has_wrap then return expr end
+    return string.format('"%s" + (%s) + "%s"', tp, expr, ts)
+  end
+
+  -- Simple letter/roman styles: built-in pattern string, or function when
+  -- offset or wrapping is needed
   local simple = {
     ["alpha-lower"] = "a", ["alpha-upper"] = "A",
     ["roman-lower"] = "i", ["roman-upper"] = "I",
   }
   if simple[style] then
     local pat = simple[style]
-    if offset == 0 then
+    if offset == 0 and not has_wrap then
       return '#set footnote(numbering: "' .. pat .. '")' .. sep
-    else
-      return string.format(
-        '#set footnote(numbering: n => numbering("%s", n + %d))', pat, offset
-      ) .. sep
     end
+    local inner = offset == 0
+      and string.format('numbering("%s", n)', pat)
+      or  string.format('numbering("%s", n + %d)', pat, offset)
+    return '#set footnote(numbering: n => ' .. wrap(inner) .. ')' .. sep
 
-  -- Numeric with offset only
+  -- Numeric: only generate when something actually changes
   elseif style == "numeric" then
-    if offset == 0 then return nil end
-    return string.format(
-      '#set footnote(numbering: n => str(n + %d))', offset
-    ) .. sep
+    if offset == 0 and not has_wrap then return nil end
+    local inner = offset == 0 and 'str(n)' or string.format('str(n + %d)', offset)
+    return '#set footnote(numbering: n => ' .. wrap(inner) .. ')' .. sep
 
   -- Zero-padded numerics
   elseif style == "numeric-02" then
-    return string.format([[
+    if not has_wrap then
+      return string.format([[
 #set footnote(numbering: n => {
   let s = str(n + %d)
   if s.len() < 2 { "0" + s } else { s }
 })]], offset) .. sep
+    else
+      return string.format([[
+#set footnote(numbering: n => {
+  let s = str(n + %d)
+  let s = if s.len() < 2 { "0" + s } else { s }
+  "%s" + s + "%s"
+})]], offset, tp, ts) .. sep
+    end
 
   elseif style == "numeric-03" then
-    return string.format([[
+    if not has_wrap then
+      return string.format([[
 #set footnote(numbering: n => {
   let s = str(n + %d)
   while s.len() < 3 { s = "0" + s }
   s
 })]], offset) .. sep
+    else
+      return string.format([[
+#set footnote(numbering: n => {
+  let s = str(n + %d)
+  while s.len() < 3 { s = "0" + s }
+  "%s" + s + "%s"
+})]], offset, tp, ts) .. sep
+    end
 
   -- Asterisk
   elseif style == "asterisk" then
-    if offset == 0 then
+    local inner = offset == 0 and '"*" * n' or string.format('"*" * (n + %d)', offset)
+    if offset == 0 and not has_wrap then
       return '#set footnote(numbering: n => "*" * n)' .. sep
-    else
-      return string.format(
-        '#set footnote(numbering: n => "*" * (n + %d))', offset
-      ) .. sep
     end
+    return '#set footnote(numbering: n => ' .. wrap(inner) .. ')' .. sep
 
   -- Symbols/custom
   elseif style == "symbols" or style == "custom" then
-    -- Use Typst's built-in "*" only when everything matches its behaviour exactly
-    if style == "symbols" and cycle_mode == "repeat" and symbol_set == nil and offset == 0 then
+    -- Use Typst's built-in "*" only when it matches exactly
+    if style == "symbols" and cycle_mode == "repeat"
+        and symbol_set == nil and offset == 0 and not has_wrap then
       return '#set footnote(numbering: "*")' .. sep
     end
 
@@ -427,14 +474,25 @@ local function generate_typst_preamble()
     local sym_array = "(" .. table.concat(sym_strs, ", ") .. ")"
 
     if cycle_mode == "restart" then
-      return string.format([[
+      if not has_wrap then
+        return string.format([[
 #set footnote(numbering: n => {
   let syms = %s
   let n = n + %d
   syms.at(calc.rem(n - 1, syms.len()))
 })]], sym_array, offset) .. sep
+      else
+        return string.format([[
+#set footnote(numbering: n => {
+  let syms = %s
+  let n = n + %d
+  let s = syms.at(calc.rem(n - 1, syms.len()))
+  "%s" + s + "%s"
+})]], sym_array, offset, tp, ts) .. sep
+      end
     else
-      return string.format([[
+      if not has_wrap then
+        return string.format([[
 #set footnote(numbering: n => {
   let syms = %s
   let n = n + %d
@@ -442,6 +500,17 @@ local function generate_typst_preamble()
   let rnd = int((n - 1) / syms.len()) + 1
   syms.at(idx) * rnd
 })]], sym_array, offset) .. sep
+      else
+        return string.format([[
+#set footnote(numbering: n => {
+  let syms = %s
+  let n = n + %d
+  let idx = calc.rem(n - 1, syms.len())
+  let rnd = int((n - 1) / syms.len()) + 1
+  let s = syms.at(idx) * rnd
+  "%s" + s + "%s"
+})]], sym_array, offset, tp, ts) .. sep
+      end
     end
   end
 
@@ -454,7 +523,10 @@ local function typst_filters()
       Meta = function(meta)
         local has_config = read_config(meta)
         if not has_config then return meta end
-        if style == "numeric" and start_at == 1 then return meta end
+        local no_ref_wrap = marker_prefix == "" and marker_suffix == ""
+        if style == "numeric" and start_at == 1 and no_ref_wrap then
+          return meta
+        end
 
         local preamble = generate_typst_preamble()
         if preamble then

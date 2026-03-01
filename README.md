@@ -8,7 +8,9 @@
   - [`style`](#style)
   - [`custom`](#custom)
   - [`cycle`](#cycle)
-  - [`separator`](#separator)
+  - [`marker-prefix` and
+    `marker-suffix`](#marker-prefix-and-marker-suffix)
+  - [`text-prefix` and `text-suffix`](#text-prefix-and-text-suffix)
   - [`start-at`](#start-at)
 - [Examples](#examples)
   - [Symbols with doubling](#symbols-with-doubling)
@@ -149,17 +151,34 @@ The default is `"repeat"`.
   \*\*, ††, ‡‡, §§, ¶¶, \*\*\*, …
 - **`restart`**: Start over from the beginning: \*, †, ‡, §, ¶, \*, †, …
 
-### `separator`
+### `marker-prefix` and `marker-suffix`
 
-The `separator` setting defines a character (or characters) placed
-between the marker and the footnote text in the footnotes section.
-Default: none.
+Text placed before and after the marker. Defaults: none. In HTML,
+applies only to the inline superscript; in LaTeX and Typst it applies to
+every occurrence of the marker (both inline and in the footnote list).
 
 ``` yaml
 extensions:
   footnote-styles:
     style: "roman-lower"
-    separator: "."
+    marker-prefix: "["
+    marker-suffix: "]"
+```
+
+This wraps the inline reference in brackets: `[i]`, `[ii]`, `[iii]`, …
+
+Supported in HTML, LaTeX/PDF, and Typst.
+
+### `text-prefix` and `text-suffix`
+
+Text placed before and after the marker in the footnote list at the
+bottom of the page. Defaults: none.
+
+``` yaml
+extensions:
+  footnote-styles:
+    style: "roman-lower"
+    text-suffix: "."
 ```
 
 This produces footnotes like:
@@ -169,12 +188,26 @@ This produces footnotes like:
      iii.  Third footnote text.
     viii.  Eighth footnote text.
 
-The markers are right-aligned, so separators like `.` and `)` align
-neatly regardless of marker width. Spacing between the separator and the
-footnote text is handled automatically by CSS.
+The markers are right-aligned, so suffixes like `.` and `)` align neatly
+regardless of marker width. Spacing between the suffix and the footnote
+text is handled automatically by CSS.
 
-> **Note:** The `separator` option is currently HTML-only. LaTeX and
-> Typst use their own default footnote text formatting.
+You can combine a prefix and suffix for styles like `(i).`, `(ii).`, …:
+
+``` yaml
+extensions:
+  footnote-styles:
+    style: "roman-lower"
+    text-prefix: "("
+    text-suffix: ")."
+```
+
+> [!NOTE]
+>
+> `text-prefix` and `text-suffix` are HTML-only. LaTeX and Typst do not
+> support independent formatting of the footnote list marker. Use
+> `marker-prefix`/`marker-suffix` if you want prefix/suffix to appear
+> consistently in both the inline mark and the footnote list.
 
 ### `start-at`
 
@@ -328,13 +361,15 @@ In the notes:
 Every Quarto format handles footnotes differently, and not every format
 supports every possible extension options.
 
-| Feature             | HTML | LaTeX/PDF | Typst |
-|---------------------|------|-----------|-------|
-| All `style` options | Yes  | Yes       | Yes   |
-| `custom` symbols    | Yes  | Yes       | Yes   |
-| `cycle` modes       | Yes  | Yes       | Yes   |
-| `separator`         | Yes  | No        | No    |
-| CSS customization   | Yes  | —         | —     |
+| Feature                         | HTML | LaTeX/PDF | Typst |
+|---------------------------------|------|-----------|-------|
+| All `style` options             | Yes  | Yes       | Yes   |
+| `custom` symbols                | Yes  | Yes       | Yes   |
+| `cycle` modes                   | Yes  | Yes       | Yes   |
+| `start-at`                      | Yes  | Yes       | Yes   |
+| `marker-prefix`/`marker-suffix` | Yes  | Yes       | Yes   |
+| `text-prefix`/`text-suffix`     | Yes  | No        | No    |
+| CSS customization               | Yes  | —         | —     |
 
 - **HTML**: Full support. The filter replaces Pandoc’s default footnote
   rendering with custom markers and uses CSS Grid for alignment in the

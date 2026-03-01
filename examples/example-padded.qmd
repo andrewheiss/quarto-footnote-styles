@@ -1,15 +1,16 @@
 ---
-title: "Asterisk (Repeating)"
+title: "Zero-Padded Numbers with Period"
 format:
   html: default
   pdf: default
   typst:
-    output-file: "example-asterisk-typst.pdf"
+    output-file: "example-padded-typst.pdf"
 filters:
   - ../_extensions/footnote-styles/footnote-styles.lua
 extensions:
   footnote-styles:
-    style: "asterisk"
+    style: "numeric-02"
+    text-suffix: "."
 ---
 
 This is some text with a footnote.[^1] Here is another footnote.[^2] And a third.[^3]
