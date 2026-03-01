@@ -32,7 +32,7 @@ Now we cycle into doubled symbols: sixth,[^6] seventh,[^7] eighth,[^8] ninth,[^9
 [^3]: This is the third footnote.
 [^4]: This is the fourth footnote.
 [^5]: This is the fifth footnote.
-[^6]: This is the sixth footnote — symbols should start doubling.
+[^6]: This is the sixth footnote—symbols should start doubling.
 [^7]: Seventh footnote.
 [^8]: Eighth footnote.
 [^9]: Ninth footnote.

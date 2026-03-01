@@ -154,6 +154,19 @@ The markers are right-aligned, so separators like `.` and `)` align neatly regar
 
 > **Note:** The `separator` option is currently HTML-only. LaTeX and Typst use their own default footnote text formatting.
 
+### `start-at`
+
+The `start-at` setting controls which marker the first footnote uses. Default: `1`.
+
+```yaml
+extensions:
+  footnote-styles:
+    style: "roman-lower"
+    start-at: 4
+```
+
+With `start-at: 4`, the first footnote in the document uses the fourth marker in the sequence (`iv` for `roman-lower`, `D` for `alpha-upper`, `§` for `symbols`, etc.). This is useful when a document is part of a series and footnote numbering needs to continue from where a previous piece left off.
+
 
 ## Examples
 
@@ -304,7 +317,7 @@ format:
 
 Main selectors to worry about:
 
-- `.footnotes ol` — The footnote list container (uses CSS Grid)
-- `.footnotes li::before` — The marker pseudo-element (right-aligned)
-- `.footnotes li > div` — The footnote body wrapper
-- `column-gap` on `.footnotes ol` — Space between marker and text (default: `0.4em`)
+- `.footnotes ol`: The footnote list container (uses CSS Grid)
+- `.footnotes li::before`: The marker pseudo-element (right-aligned)
+- `.footnotes li > div`: The footnote body wrapper
+- `column-gap` on `.footnotes ol`: Space between marker and text (default: `0.4em`)

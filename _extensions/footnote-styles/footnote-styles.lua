@@ -7,6 +7,7 @@ local style = "numeric"
 local cycle_mode = "repeat"
 local symbol_set = nil
 local separator = ""
+local start_at = 1
 
 -- Default symbol sets for predefined styles
 local SYMBOLS = { "*", "\u{2020}", "\u{2021}", "\u{00A7}", "\u{00B6}" }
@@ -118,6 +119,12 @@ local function read_config(meta)
     separator = pandoc.utils.stringify(ext_config.separator)
   end
 
+  -- Read start-at
+  if ext_config["start-at"] then
+    local v = tonumber(pandoc.utils.stringify(ext_config["start-at"]))
+    if v then start_at = math.max(1, math.floor(v)) end
+  end
+
   -- Read custom symbols (overrides style)
   if ext_config.custom then
     symbol_set = {}
@@ -141,7 +148,7 @@ local function inject_html_css()
   end
 
   -- Use CSS Grid on <ol> with display:contents on <li> so that all
-  -- ::before markers share a single auto-sized column — the grid
+  -- ::before markers share a single auto-sized column—the grid
   -- automatically sizes to the widest marker, no width calc needed.
   local css = string.format([[
 .footnotes ol {
@@ -177,7 +184,9 @@ local function html_filters()
     {
       Meta = function(meta)
         local has_config = read_config(meta)
-        if not has_config or style == "numeric" then
+        if not has_config then
+          style = nil
+        elseif style == "numeric" and start_at == 1 then
           style = nil
         end
         return meta
@@ -185,12 +194,12 @@ local function html_filters()
     },
     {
       Note = function(el)
-        if style == nil or style == "numeric" then
+        if style == nil then
           return el
         end
 
         counter = counter + 1
-        local n = counter
+        local n = counter + start_at - 1
         local sym = get_symbol(n)
         local escaped_sym = html_escape(sym)
 
@@ -209,7 +218,7 @@ local function html_filters()
     },
     {
       Pandoc = function(doc)
-        if style == nil or style == "numeric" or #footnotes == 0 then
+        if style == nil or #footnotes == 0 then
           return doc
         end
 
@@ -299,7 +308,7 @@ local function generate_latex_preamble()
 
   -- Styles that need a generated \ifcase lookup
   elseif style == "symbols" or style == "custom" or style == "asterisk" then
-    -- Generate \ifcase entries using get_symbol() — reuses the same
+    -- Generate \ifcase entries using get_symbol()—reuses the same
     -- cycling logic as HTML so output is consistent across formats
     local max_n = 50
     local entries = {}
@@ -325,13 +334,19 @@ local function latex_filters()
     {
       Meta = function(meta)
         local has_config = read_config(meta)
-        if not has_config or style == "numeric" then
-          return meta
-        end
+        if not has_config then return meta end
 
-        local preamble = generate_latex_preamble()
-        if preamble then
-          quarto.doc.include_text("in-header", preamble)
+        local parts = {}
+        if style ~= "numeric" then
+          local preamble = generate_latex_preamble()
+          if preamble then table.insert(parts, preamble) end
+        end
+        if #parts > 0 then
+          quarto.doc.include_text("in-header", table.concat(parts, "\n"))
+        end
+        if start_at > 1 then
+          quarto.doc.include_text("before-body",
+            string.format("\\setcounter{footnote}{%d}", start_at - 1))
         end
         return meta
       end
@@ -344,45 +359,66 @@ end
 ------------------------------------------------------------------------
 
 local function generate_typst_preamble()
-  -- Simple styles that map to Typst numbering patterns
-  if style == "alpha-lower" then
-    return '#set footnote(numbering: "a")\n#set footnote.entry(separator: line(length: 40%, stroke: 0.5pt))'
-  elseif style == "alpha-upper" then
-    return '#set footnote(numbering: "A")\n#set footnote.entry(separator: line(length: 40%, stroke: 0.5pt))'
-  elseif style == "roman-lower" then
-    return '#set footnote(numbering: "i")\n#set footnote.entry(separator: line(length: 40%, stroke: 0.5pt))'
-  elseif style == "roman-upper" then
-    return '#set footnote(numbering: "I")\n#set footnote.entry(separator: line(length: 40%, stroke: 0.5pt))'
+  local offset = start_at - 1
+  -- sep is concatenated directly, never passed through string.format,
+  -- so the literal % in "40%" is safe
+  local sep = '\n#set footnote.entry(separator: line(length: 40%, stroke: 0.5pt))'
 
-  -- Typst's "*" pattern does *, †, ‡, §, ¶ with doubling — matches our symbols+repeat
-  elseif style == "symbols" and cycle_mode == "repeat" and symbol_set == nil then
-    return '#set footnote(numbering: "*")\n#set footnote.entry(separator: line(length: 40%, stroke: 0.5pt))'
+  -- Simple letter/roman styles: use built-in pattern or numbering() with offset
+  local simple = {
+    ["alpha-lower"] = "a", ["alpha-upper"] = "A",
+    ["roman-lower"] = "i", ["roman-upper"] = "I",
+  }
+  if simple[style] then
+    local pat = simple[style]
+    if offset == 0 then
+      return '#set footnote(numbering: "' .. pat .. '")' .. sep
+    else
+      return string.format(
+        '#set footnote(numbering: n => numbering("%s", n + %d))', pat, offset
+      ) .. sep
+    end
 
-  -- Styles that need a custom Typst numbering function
+  -- Numeric with offset only
+  elseif style == "numeric" then
+    if offset == 0 then return nil end
+    return string.format(
+      '#set footnote(numbering: n => str(n + %d))', offset
+    ) .. sep
+
+  -- Zero-padded numerics
   elseif style == "numeric-02" then
-    return [[
+    return string.format([[
 #set footnote(numbering: n => {
-  let s = str(n)
+  let s = str(n + %d)
   if s.len() < 2 { "0" + s } else { s }
-})
-#set footnote.entry(separator: line(length: 40%, stroke: 0.5pt))]]
+})]], offset) .. sep
 
   elseif style == "numeric-03" then
-    return [[
+    return string.format([[
 #set footnote(numbering: n => {
-  let s = str(n)
+  let s = str(n + %d)
   while s.len() < 3 { s = "0" + s }
   s
-})
-#set footnote.entry(separator: line(length: 40%, stroke: 0.5pt))]]
+})]], offset) .. sep
 
+  -- Asterisk
   elseif style == "asterisk" then
-    return [[
-#set footnote(numbering: n => "*" * n)
-#set footnote.entry(separator: line(length: 40%, stroke: 0.5pt))]]
+    if offset == 0 then
+      return '#set footnote(numbering: n => "*" * n)' .. sep
+    else
+      return string.format(
+        '#set footnote(numbering: n => "*" * (n + %d))', offset
+      ) .. sep
+    end
 
+  -- Symbols/custom
   elseif style == "symbols" or style == "custom" then
-    -- Generate a Typst function with the symbol set
+    -- Use Typst's built-in "*" only when everything matches its behaviour exactly
+    if style == "symbols" and cycle_mode == "repeat" and symbol_set == nil and offset == 0 then
+      return '#set footnote(numbering: "*")' .. sep
+    end
+
     local symbols = symbol_set or SYMBOLS
     local sym_strs = {}
     for _, s in ipairs(symbols) do
@@ -394,18 +430,18 @@ local function generate_typst_preamble()
       return string.format([[
 #set footnote(numbering: n => {
   let syms = %s
+  let n = n + %d
   syms.at(calc.rem(n - 1, syms.len()))
-})
-#set footnote.entry(separator: line(length: 40%%, stroke: 0.5pt))]], sym_array)
+})]], sym_array, offset) .. sep
     else
       return string.format([[
 #set footnote(numbering: n => {
   let syms = %s
+  let n = n + %d
   let idx = calc.rem(n - 1, syms.len())
   let rnd = int((n - 1) / syms.len()) + 1
   syms.at(idx) * rnd
-})
-#set footnote.entry(separator: line(length: 40%%, stroke: 0.5pt))]], sym_array)
+})]], sym_array, offset) .. sep
     end
   end
 
@@ -417,9 +453,8 @@ local function typst_filters()
     {
       Meta = function(meta)
         local has_config = read_config(meta)
-        if not has_config or style == "numeric" then
-          return meta
-        end
+        if not has_config then return meta end
+        if style == "numeric" and start_at == 1 then return meta end
 
         local preamble = generate_typst_preamble()
         if preamble then

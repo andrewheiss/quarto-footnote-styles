@@ -1,0 +1,25 @@
+---
+title: "Start At"
+format:
+  html: default
+  pdf: default
+  typst:
+    output-file: "example-start-at-typst.pdf"
+filters:
+  - ../_extensions/footnote-styles/footnote-styles.lua
+extensions:
+  footnote-styles:
+    style: "roman-lower"
+    separator: "."
+    start-at: 4
+---
+
+The first footnote here begins at iv, as if this document is continuing from a piece that had three earlier footnotes.[^1] Here is the next.[^2] And a third.[^3]
+
+A fourth footnote here.[^4] And a fifth.[^5]
+
+[^1]: First footnote—marker is iv.
+[^2]: Second footnote—marker is v.
+[^3]: Third footnote—marker is vi.
+[^4]: Fourth footnote—marker is vii.
+[^5]: Fifth footnote—marker is viii.
