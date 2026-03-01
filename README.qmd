@@ -255,13 +255,14 @@ In the notes:
 ◆ 8
 ```
 
-### Padded numbers with separator
+### Padded numbers with separator starting at 3
 
 ```yaml
 extensions:
   footnote-styles:
     style: "numeric-02"
     separator: ")"
+    start-at: 3
 ```
 
 In Markdown:
@@ -272,19 +273,19 @@ This^[1] is^[2] a^[3] sentence^[4] with^[5] lots^[6] of^[7] notes^[8] in it.
 
 In the text:
 
-> This<sup>01</sup> is<sup>02</sup> a<sup>03</sup> sentence<sup>04</sup> with<sup>05</sup> lots<sup>06</sup> of<sup>07</sup> notes<sup>08</sup> in it.
+> This<sup>03</sup> is<sup>04</sup> a<sup>05</sup> sentence<sup>06</sup> with<sup>07</sup> lots<sup>08</sup> of<sup>09</sup> notes<sup>10</sup> in it.
 
 In the notes:
 
 ```default
-01) 1
-02) 2
-03) 3
-04) 4
-05) 5
-06) 6
-07) 7
-08) 8
+03) 1
+04) 2
+05) 3
+06) 4
+07) 5
+08) 6
+09) 7
+10) 8
 ```
 
 ## Format support

@@ -9,12 +9,14 @@
   - [`custom`](#custom)
   - [`cycle`](#cycle)
   - [`separator`](#separator)
+  - [`start-at`](#start-at)
 - [Examples](#examples)
   - [Symbols with doubling](#symbols-with-doubling)
   - [Roman numerals with period
     separator](#roman-numerals-with-period-separator)
   - [Custom symbols with restart](#custom-symbols-with-restart)
-  - [Padded numbers with separator](#padded-numbers-with-separator)
+  - [Padded numbers with separator starting at
+    3](#padded-numbers-with-separator-starting-at-3)
 - [Format support](#format-support)
 - [Customizing CSS](#customizing-css)
 
@@ -174,6 +176,24 @@ footnote text is handled automatically by CSS.
 > **Note:** The `separator` option is currently HTML-only. LaTeX and
 > Typst use their own default footnote text formatting.
 
+### `start-at`
+
+The `start-at` setting controls which marker the first footnote uses.
+Default: `1`.
+
+``` yaml
+extensions:
+  footnote-styles:
+    style: "roman-lower"
+    start-at: 4
+```
+
+With `start-at: 4`, the first footnote in the document uses the fourth
+marker in the sequence (`iv` for `roman-lower`, `D` for `alpha-upper`,
+`§` for `symbols`, etc.). This is useful when a document is part of a
+series and footnote numbering needs to continue from where a previous
+piece left off.
+
 ## Examples
 
 See the different `.qmd` files in the `examples/` folder in this
@@ -268,13 +288,14 @@ In the notes:
 ◆ 8
 ```
 
-### Padded numbers with separator
+### Padded numbers with separator starting at 3
 
 ``` yaml
 extensions:
   footnote-styles:
     style: "numeric-02"
     separator: ")"
+    start-at: 3
 ```
 
 In Markdown:
@@ -285,21 +306,21 @@ This^[1] is^[2] a^[3] sentence^[4] with^[5] lots^[6] of^[7] notes^[8] in it.
 
 In the text:
 
-> This<sup>01</sup> is<sup>02</sup> a<sup>03</sup> sentence<sup>04</sup>
-> with<sup>05</sup> lots<sup>06</sup> of<sup>07</sup> notes<sup>08</sup>
+> This<sup>03</sup> is<sup>04</sup> a<sup>05</sup> sentence<sup>06</sup>
+> with<sup>07</sup> lots<sup>08</sup> of<sup>09</sup> notes<sup>10</sup>
 > in it.
 
 In the notes:
 
 ``` default
-01) 1
-02) 2
-03) 3
-04) 4
-05) 5
-06) 6
-07) 7
-08) 8
+03) 1
+04) 2
+05) 3
+06) 4
+07) 5
+08) 6
+09) 7
+10) 8
 ```
 
 ## Format support
@@ -343,8 +364,8 @@ format:
 
 Main selectors to worry about:
 
-- `.footnotes ol` — The footnote list container (uses CSS Grid)
-- `.footnotes li::before` — The marker pseudo-element (right-aligned)
-- `.footnotes li > div` — The footnote body wrapper
-- `column-gap` on `.footnotes ol` — Space between marker and text
+- `.footnotes ol`: The footnote list container (uses CSS Grid)
+- `.footnotes li::before`: The marker pseudo-element (right-aligned)
+- `.footnotes li > div`: The footnote body wrapper
+- `column-gap` on `.footnotes ol`: Space between marker and text
   (default: `0.4em`)
