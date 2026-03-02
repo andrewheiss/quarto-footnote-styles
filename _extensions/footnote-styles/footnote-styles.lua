@@ -20,7 +20,7 @@ local SYMBOLS = { "*", "\u{2020}", "\u{2021}", "\u{00A7}", "\u{00B6}" }
 local function to_roman(n)
   local numerals = {
     { 1000, "m" }, { 900, "cm" }, { 500, "d" }, { 400, "cd" },
-    { 100, "c" }, { 90, "xc" }, { 50, "l" }, { 40, "xl" },
+    { 100,  "c" }, { 90, "xc" }, { 50, "l" }, { 40, "xl" },
     { 10, "x" }, { 9, "ix" }, { 5, "v" }, { 4, "iv" }, { 1, "i" }
   }
   local result = ""
@@ -125,7 +125,7 @@ local function read_config(meta)
     marker_suffix = pandoc.utils.stringify(ext_config["marker-suffix"])
   end
 
-  -- Read text prefix/suffix (HTML only)
+  -- Read text prefix/suffix (HTML and Typst; not supported in LaTeX)
   if ext_config["text-prefix"] then
     text_prefix = pandoc.utils.stringify(ext_config["text-prefix"])
   end
@@ -194,7 +194,7 @@ local function html_filters()
       Meta = function(meta)
         local has_config = read_config(meta)
         local no_prefix_suffix = marker_prefix == "" and marker_suffix == ""
-          and text_prefix == "" and text_suffix == ""
+            and text_prefix == "" and text_suffix == ""
         if not has_config then
           style = nil
         elseif style == "numeric" and start_at == 1 and no_prefix_suffix then
@@ -302,13 +302,12 @@ local function generate_latex_preamble()
   elseif style == "roman-upper" then
     return "\\renewcommand{\\thefootnote}{\\Roman{footnote}}"
 
-  -- Zero-padded numerics
+    -- Zero-padded numerics
   elseif style == "numeric-02" then
     return [[
 \makeatletter
 \renewcommand{\thefootnote}{\two@digits{\value{footnote}}}
 \makeatother]]
-
   elseif style == "numeric-03" then
     return [[
 \makeatletter
@@ -316,7 +315,7 @@ local function generate_latex_preamble()
 \renewcommand{\thefootnote}{\@fnthreedigits{\value{footnote}}}
 \makeatother]]
 
-  -- Styles that need a generated \ifcase lookup
+    -- Styles that need a generated \ifcase lookup
   elseif style == "symbols" or style == "custom" or style == "asterisk" then
     -- Generate \ifcase entries using get_symbol()—reuses the same
     -- cycling logic as HTML so output is consistent across formats
@@ -379,7 +378,7 @@ end
 local function generate_typst_preamble()
   local offset = start_at - 1
   -- Typst's numbering function applies to both inline and list markers equally,
-  -- so marker-prefix/suffix affects both (text-prefix/suffix is HTML-only)
+  -- so marker-prefix/suffix affects both
   local tp = typst_str_escape(marker_prefix)
   local ts = typst_str_escape(marker_suffix)
   local has_wrap = marker_prefix ~= "" or marker_suffix ~= ""
@@ -397,8 +396,10 @@ local function generate_typst_preamble()
   -- Simple letter/roman styles: built-in pattern string, or function when
   -- offset or wrapping is needed
   local simple = {
-    ["alpha-lower"] = "a", ["alpha-upper"] = "A",
-    ["roman-lower"] = "i", ["roman-upper"] = "I",
+    ["alpha-lower"] = "a",
+    ["alpha-upper"] = "A",
+    ["roman-lower"] = "i",
+    ["roman-upper"] = "I",
   }
   if simple[style] then
     local pat = simple[style]
@@ -406,17 +407,17 @@ local function generate_typst_preamble()
       return '#set footnote(numbering: "' .. pat .. '")' .. sep
     end
     local inner = offset == 0
-      and string.format('numbering("%s", n)', pat)
-      or  string.format('numbering("%s", n + %d)', pat, offset)
+        and string.format('numbering("%s", n)', pat)
+        or string.format('numbering("%s", n + %d)', pat, offset)
     return '#set footnote(numbering: n => ' .. wrap(inner) .. ')' .. sep
 
-  -- Numeric: only generate when something actually changes
+    -- Numeric: only generate when something actually changes
   elseif style == "numeric" then
     if offset == 0 and not has_wrap then return nil end
     local inner = offset == 0 and 'str(n)' or string.format('str(n + %d)', offset)
     return '#set footnote(numbering: n => ' .. wrap(inner) .. ')' .. sep
 
-  -- Zero-padded numerics
+    -- Zero-padded numerics
   elseif style == "numeric-02" then
     if not has_wrap then
       return string.format([[
@@ -432,7 +433,6 @@ local function generate_typst_preamble()
   "%s" + s + "%s"
 })]], offset, tp, ts) .. sep
     end
-
   elseif style == "numeric-03" then
     if not has_wrap then
       return string.format([[
@@ -450,7 +450,7 @@ local function generate_typst_preamble()
 })]], offset, tp, ts) .. sep
     end
 
-  -- Asterisk
+    -- Asterisk
   elseif style == "asterisk" then
     local inner = offset == 0 and '"*" * n' or string.format('"*" * (n + %d)', offset)
     if offset == 0 and not has_wrap then
@@ -458,7 +458,7 @@ local function generate_typst_preamble()
     end
     return '#set footnote(numbering: n => ' .. wrap(inner) .. ')' .. sep
 
-  -- Symbols/custom
+    -- Symbols/custom
   elseif style == "symbols" or style == "custom" then
     -- Use Typst's built-in "*" only when it matches exactly
     if style == "symbols" and cycle_mode == "repeat"
@@ -517,6 +517,30 @@ local function generate_typst_preamble()
   return nil
 end
 
+local function generate_typst_entry_rule()
+  if text_prefix == "" and text_suffix == "" then return nil end
+  local etp = typst_str_escape(text_prefix)
+  local ets = typst_str_escape(text_suffix)
+  local lines = {
+    '#show footnote.entry: it => {',
+    '  let loc = it.note.location()',
+    '  let num = numbering(it.note.numbering, ..counter(footnote).at(loc))',
+  }
+  if marker_prefix ~= "" then
+    table.insert(lines, string.format(
+      '  let num = num.trim("%s", at: start, repeat: false)',
+      typst_str_escape(marker_prefix)))
+  end
+  if marker_suffix ~= "" then
+    table.insert(lines, string.format(
+      '  let num = num.trim("%s", at: end, repeat: false)',
+      typst_str_escape(marker_suffix)))
+  end
+  table.insert(lines, string.format('  "%s" + num + "%s " + it.note.body', etp, ets))
+  table.insert(lines, '}')
+  return table.concat(lines, '\n')
+end
+
 local function typst_filters()
   return {
     {
@@ -524,13 +548,18 @@ local function typst_filters()
         local has_config = read_config(meta)
         if not has_config then return meta end
         local no_ref_wrap = marker_prefix == "" and marker_suffix == ""
-        if style == "numeric" and start_at == 1 and no_ref_wrap then
+        local no_text_wrap = text_prefix == "" and text_suffix == ""
+        if style == "numeric" and start_at == 1 and no_ref_wrap and no_text_wrap then
           return meta
         end
 
         local preamble = generate_typst_preamble()
         if preamble then
           quarto.doc.include_text("in-header", preamble)
+        end
+        local entry_rule = generate_typst_entry_rule()
+        if entry_rule then
+          quarto.doc.include_text("in-header", entry_rule)
         end
         return meta
       end

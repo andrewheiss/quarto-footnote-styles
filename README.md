@@ -32,7 +32,7 @@ styles. You can also define your own custom numbering system.
 
 It also includes options for starting numbering at arbitrary values and
 including prefixes and suffixes to in-text marker numbers (in HTML,
-LaTeX, and Typst) and to the footnote text (in HTML only).
+LaTeX, and Typst) and to the footnote text (in HTML and Typst).
 
 The extension supports HTML, LaTeX, and Typst. It does not support Word
 because Word makes it impossible(?!) to programmatically adjust these
@@ -206,7 +206,7 @@ This produces footnotes like:
 
 The markers are right-aligned, so suffixes like `.` and `)` align neatly
 regardless of marker width. Spacing between the suffix and the footnote
-text is handled automatically by CSS.
+text is handled automatically.
 
 You can combine a prefix and suffix for styles like `(i).`, `(ii).`, …:
 
@@ -220,8 +220,7 @@ extensions:
 
 > [!NOTE]
 >
-> `text-prefix` and `text-suffix` are HTML-only. LaTeX and Typst do not
-> support independent formatting of the footnote list marker. Use
+> `text-prefix` and `text-suffix` are not supported in LaTeX. Use
 > `marker-prefix`/`marker-suffix` if you want prefix/suffix to appear
 > consistently in both the inline mark and the footnote list.
 
@@ -366,7 +365,7 @@ supports every possible extension option.
 | `cycle` modes                   | Yes  | Yes   | Yes   |
 | `start-at`                      | Yes  | Yes   | Yes   |
 | `marker-prefix`/`marker-suffix` | Yes  | Yes   | Yes   |
-| `text-prefix`/`text-suffix`     | Yes  | No    | No    |
+| `text-prefix`/`text-suffix`     | Yes  | No    | Yes   |
 | CSS customization               | Yes  | —     | —     |
 
 - **HTML**: Full support. The filter replaces Pandoc’s default footnote
@@ -382,7 +381,10 @@ supports every possible extension option.
 
 - **Typst**: Injects `#set footnote(numbering: ...)` into the document
   header. Simple styles map to Typst’s built-in numbering patterns.
-  Complex styles use custom numbering functions.
+  Complex styles use custom numbering functions. When
+  `text-prefix`/`text-suffix` are set, a `#show footnote.entry` rule
+  formats the footnote list markers independently from the inline
+  superscripts.
 
 ## Customizing CSS
 
