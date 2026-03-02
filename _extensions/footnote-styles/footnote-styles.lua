@@ -125,7 +125,7 @@ local function read_config(meta)
     marker_suffix = pandoc.utils.stringify(ext_config["marker-suffix"])
   end
 
-  -- Read text prefix/suffix (HTML only)
+  -- Read text prefix/suffix (HTML and Typst; not supported in LaTeX)
   if ext_config["text-prefix"] then
     text_prefix = pandoc.utils.stringify(ext_config["text-prefix"])
   end
@@ -379,7 +379,7 @@ end
 local function generate_typst_preamble()
   local offset = start_at - 1
   -- Typst's numbering function applies to both inline and list markers equally,
-  -- so marker-prefix/suffix affects both (text-prefix/suffix is HTML-only)
+  -- so marker-prefix/suffix affects both
   local tp = typst_str_escape(marker_prefix)
   local ts = typst_str_escape(marker_suffix)
   local has_wrap = marker_prefix ~= "" or marker_suffix ~= ""
@@ -517,6 +517,76 @@ local function generate_typst_preamble()
   return nil
 end
 
+-- Return a Typst expression that computes the raw footnote number from
+-- variable `n` (an integer counter value), without marker-prefix/suffix.
+local function generate_typst_raw_num_expr()
+  local offset = start_at - 1
+  local n = offset == 0 and "n" or string.format("(n + %d)", offset)
+
+  local simple = {
+    ["alpha-lower"] = "a", ["alpha-upper"] = "A",
+    ["roman-lower"] = "i", ["roman-upper"] = "I",
+  }
+
+  if simple[style] then
+    return string.format('numbering("%s", %s)', simple[style], n)
+  elseif style == "numeric" then
+    return string.format('str(%s)', n)
+  elseif style == "numeric-02" then
+    return string.format([[{
+    let s = str(%s)
+    if s.len() < 2 { "0" + s } else { s }
+  }]], n)
+  elseif style == "numeric-03" then
+    return string.format([[{
+    let s = str(%s)
+    while s.len() < 3 { s = "0" + s }
+    s
+  }]], n)
+  elseif style == "asterisk" then
+    return string.format('"*" * %s', n)
+  elseif style == "symbols" or style == "custom" then
+    local symbols = symbol_set or SYMBOLS
+    local sym_strs = {}
+    for _, s in ipairs(symbols) do
+      table.insert(sym_strs, '"' .. s .. '"')
+    end
+    local sym_array = "(" .. table.concat(sym_strs, ", ") .. ")"
+
+    if cycle_mode == "restart" then
+      return string.format([[{
+    let syms = %s
+    let n = %s
+    syms.at(calc.rem(n - 1, syms.len()))
+  }]], sym_array, n)
+    else
+      return string.format([[{
+    let syms = %s
+    let n = %s
+    let idx = calc.rem(n - 1, syms.len())
+    let rnd = int((n - 1) / syms.len()) + 1
+    syms.at(idx) * rnd
+  }]], sym_array, n)
+    end
+  end
+
+  return string.format('str(%s)', n)
+end
+
+local function generate_typst_entry_rule()
+  if text_prefix == "" and text_suffix == "" then return nil end
+  local etp = typst_str_escape(text_prefix)
+  local ets = typst_str_escape(text_suffix)
+  local num_expr = generate_typst_raw_num_expr()
+  return string.format([[
+#show footnote.entry: it => {
+  let n = counter(footnote).at(it.note.location()).first()
+  let num = %s
+  h(11pt)
+  "%s" + num + "%s " + it.note.body
+}]], num_expr, etp, ets)
+end
+
 local function typst_filters()
   return {
     {
@@ -524,13 +594,18 @@ local function typst_filters()
         local has_config = read_config(meta)
         if not has_config then return meta end
         local no_ref_wrap = marker_prefix == "" and marker_suffix == ""
-        if style == "numeric" and start_at == 1 and no_ref_wrap then
+        local no_text_wrap = text_prefix == "" and text_suffix == ""
+        if style == "numeric" and start_at == 1 and no_ref_wrap and no_text_wrap then
           return meta
         end
 
         local preamble = generate_typst_preamble()
         if preamble then
           quarto.doc.include_text("in-header", preamble)
+        end
+        local entry_rule = generate_typst_entry_rule()
+        if entry_rule then
+          quarto.doc.include_text("in-header", entry_rule)
         end
         return meta
       end
