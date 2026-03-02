@@ -8,10 +8,10 @@
   - [`style`](#style)
   - [`custom`](#custom)
   - [`cycle`](#cycle)
+  - [`start-at`](#start-at)
   - [`marker-prefix` and
     `marker-suffix`](#marker-prefix-and-marker-suffix)
   - [`text-prefix` and `text-suffix`](#text-prefix-and-text-suffix)
-  - [`start-at`](#start-at)
 - [Examples](#examples)
   - [Symbols with doubling](#symbols-with-doubling)
   - [Roman numerals with period
@@ -25,26 +25,24 @@
 <!-- README.md is generated from README.qmd. Please edit that file -->
 
 This extension replaces Quarto’s default numeric footnote numbering with
-several alternative numbering systems, inspired by Adobe InDesign’s
-numbering styles.
+several alternative numbering systems (like `*, †, ‡, §, ¶, **, ††, …`
+or `a, b, c, … z, aa, ab, …`), inspired by [Adobe
+InDesign’s](https://en.wikipedia.org/wiki/Adobe_InDesign) numbering
+styles. You can also define your own custom numbering system.
 
-| Style         | Sequence                    |
-|---------------|-----------------------------|
-| `numeric`     | 1, 2, 3, 4, … (default)     |
-| `numeric-02`  | 01, 02, 03, …               |
-| `numeric-03`  | 001, 002, 003, …            |
-| `alpha-lower` | a, b, c, … z, aa, ab, …     |
-| `alpha-upper` | A, B, C, … Z, AA, AB, …     |
-| `roman-lower` | i, ii, iii, iv, v, …        |
-| `roman-upper` | I, II, III, IV, V, …        |
-| `symbols`     | \*, †, ‡, §, ¶, \*\*, ††, … |
-| `asterisk`    | \*, \*\*, \*\*\*, …         |
+It also includes options for starting numbering at arbitrary values and
+including prefixes and suffixes to in-text marker numbers (in HTML,
+LaTeX, and Typst) and to the footnote text (in HTML only).
 
-You can also define your own custom numbering system.
+The extension supports HTML, LaTeX, and Typst. It does not support Word
+because Word makes it impossible(?!) to programmatically adjust these
+kinds of footnote settings.
 
-The extension supports HTML, LaTeX/PDF, and Typst. It does not support
-Word because Word makes it impossible(?!) to programmatically adjust
-these kinds of footnote settings.
+Put simply, it recreates these options from InDesign’s footnotes
+settings menu:
+
+<img src="img/indesign-options.png"
+data-fig-alt="Three screenshots from InDesign showing the `style` option, `start-at` option, and `marker/text prefix/suffix` options" />
 
 ## Installation
 
@@ -151,6 +149,24 @@ The default is `"repeat"`.
   \*\*, ††, ‡‡, §§, ¶¶, \*\*\*, …
 - **`restart`**: Start over from the beginning: \*, †, ‡, §, ¶, \*, †, …
 
+### `start-at`
+
+The `start-at` setting controls which marker the first footnote uses.
+Default: `1`.
+
+``` yaml
+extensions:
+  footnote-styles:
+    style: "roman-lower"
+    start-at: 4
+```
+
+With `start-at: 4`, the first footnote in the document uses the fourth
+marker in the sequence (`iv` for `roman-lower`, `D` for `alpha-upper`,
+`§` for `symbols`, etc.). This is useful when a document is part of a
+series and footnote numbering needs to continue from where a previous
+piece left off.
+
 ### `marker-prefix` and `marker-suffix`
 
 Text placed before and after the marker. Defaults: none. In HTML,
@@ -167,7 +183,7 @@ extensions:
 
 This wraps the inline reference in brackets: `[i]`, `[ii]`, `[iii]`, …
 
-Supported in HTML, LaTeX/PDF, and Typst.
+Supported in HTML, LaTeX, and Typst.
 
 ### `text-prefix` and `text-suffix`
 
@@ -208,24 +224,6 @@ extensions:
 > support independent formatting of the footnote list marker. Use
 > `marker-prefix`/`marker-suffix` if you want prefix/suffix to appear
 > consistently in both the inline mark and the footnote list.
-
-### `start-at`
-
-The `start-at` setting controls which marker the first footnote uses.
-Default: `1`.
-
-``` yaml
-extensions:
-  footnote-styles:
-    style: "roman-lower"
-    start-at: 4
-```
-
-With `start-at: 4`, the first footnote in the document uses the fourth
-marker in the sequence (`iv` for `roman-lower`, `D` for `alpha-upper`,
-`§` for `symbols`, etc.). This is useful when a document is part of a
-series and footnote numbering needs to continue from where a previous
-piece left off.
 
 ## Examples
 
@@ -359,23 +357,23 @@ In the notes:
 ## Format support
 
 Every Quarto format handles footnotes differently, and not every format
-supports every possible extension options.
+supports every possible extension option.
 
-| Feature                         | HTML | LaTeX/PDF | Typst |
-|---------------------------------|------|-----------|-------|
-| All `style` options             | Yes  | Yes       | Yes   |
-| `custom` symbols                | Yes  | Yes       | Yes   |
-| `cycle` modes                   | Yes  | Yes       | Yes   |
-| `start-at`                      | Yes  | Yes       | Yes   |
-| `marker-prefix`/`marker-suffix` | Yes  | Yes       | Yes   |
-| `text-prefix`/`text-suffix`     | Yes  | No        | No    |
-| CSS customization               | Yes  | —         | —     |
+| Feature                         | HTML | LaTeX | Typst |
+|---------------------------------|------|-------|-------|
+| All `style` options             | Yes  | Yes   | Yes   |
+| `custom` symbols                | Yes  | Yes   | Yes   |
+| `cycle` modes                   | Yes  | Yes   | Yes   |
+| `start-at`                      | Yes  | Yes   | Yes   |
+| `marker-prefix`/`marker-suffix` | Yes  | Yes   | Yes   |
+| `text-prefix`/`text-suffix`     | Yes  | No    | No    |
+| CSS customization               | Yes  | —     | —     |
 
 - **HTML**: Full support. The filter replaces Pandoc’s default footnote
   rendering with custom markers and uses CSS Grid for alignment in the
   footnotes section.
 
-- **LaTeX/PDF**: Injects `\renewcommand{\thefootnote}{...}` into the
+- **LaTeX**: Injects `\renewcommand{\thefootnote}{...}` into the
   preamble. Simple styles (`alpha-lower`, `roman-upper`, etc.) use
   native LaTeX counter formats. Complex styles (`symbols`, `asterisk`,
   `custom`) generate a `\ifcase` lookup table. Requires the XeLaTeX or
