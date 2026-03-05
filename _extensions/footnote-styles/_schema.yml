@@ -1,0 +1,46 @@
+$schema: https://m.canouil.dev/quarto-wizard/assets/schema/v1/extension-schema.json
+
+options:
+  style:
+    type: string
+    default: numeric
+    enum:
+      - numeric
+      - numeric-02
+      - numeric-03
+      - alpha-lower
+      - alpha-upper
+      - roman-lower
+      - roman-upper
+      - symbols
+      - asterisk
+    description: Footnote numbering style.
+  custom:
+    type: array
+    items:
+      type: string
+    description: Custom symbol sequence overriding style.
+  cycle:
+    type: string
+    default: repeat
+    enum:
+      - repeat
+      - restart
+    description: Behaviour when symbol sets are exhausted.
+  start-at:
+    type: integer
+    default: 1
+    min: 1
+    description: Starting footnote number.
+  marker-prefix:
+    type: string
+    description: Prefix added to inline footnote markers.
+  marker-suffix:
+    type: string
+    description: Suffix added to inline footnote markers.
+  text-prefix:
+    type: string
+    description: Prefix added to footnote list markers in HTML output.
+  text-suffix:
+    type: string
+    description: Suffix added to footnote list markers in HTML output.
