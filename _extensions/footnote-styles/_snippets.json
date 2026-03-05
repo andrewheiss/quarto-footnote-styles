@@ -1,0 +1,24 @@
+{
+  "Footnote styles config": {
+    "prefix": "footnote-styles-config",
+    "body": [
+      "filters:",
+      "  - footnote-styles",
+      "extensions:",
+      "  footnote-styles:",
+      "    style: ${1|numeric,symbols,roman-lower,roman-upper,alpha-lower,alpha-upper|}",
+      "    start-at: ${2:1}"
+    ],
+    "description": "Enable footnote-styles and define basic numbering options."
+  },
+  "Custom footnote symbols": {
+    "prefix": "footnote-styles-custom",
+    "body": [
+      "extensions:",
+      "  footnote-styles:",
+      "    custom: [\"${1:\u2020}\", \"${2:\u2021}\", \"${3:\u00A7}\"]",
+      "    cycle: ${4|repeat,restart|}"
+    ],
+    "description": "Define a custom footnote symbol sequence."
+  }
+}
