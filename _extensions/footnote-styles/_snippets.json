@@ -1,6 +1,6 @@
 {
   "Footnote styles config": {
-    "prefix": "footnote-styles-config",
+    "prefix": "config",
     "body": [
       "filters:",
       "  - footnote-styles",
@@ -12,7 +12,7 @@
     "description": "Enable footnote-styles and define basic numbering options."
   },
   "Custom footnote symbols": {
-    "prefix": "footnote-styles-custom",
+    "prefix": "custom",
     "body": [
       "extensions:",
       "  footnote-styles:",
